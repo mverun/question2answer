@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -97,7 +97,6 @@
 		'min_length_x' => 'Please provide more information - at least ^ characters',
 		'max_upload_size_x' => 'Maximum upload size is ^',
 		'moved' => 'moved',
-		'nav_account' => 'My Account',
 		'nav_activity' => 'All Activity',
 		'nav_admin' => 'Admin',
 		'nav_ask' => 'Ask a Question',
@@ -148,8 +147,8 @@
 		'recent_activity_title' => 'Recent activity',
 		'recent_as_in_x' => 'Recently answered questions in ^',
 		'recent_as_title' => 'Recently answered questions',
-		'recent_cs_in_x' => 'Recently added comments in ^',
-		'recent_cs_title' => 'Recently added comments',
+		'recent_cs_in_x' => 'Recently commented questions in ^',
+		'recent_cs_title' => 'Recently commented questions',
 		'recent_qs_as_in_x' => 'Recent questions and answers in ^',
 		'recent_qs_as_title' => 'Recent questions and answers',
 		'recent_qs_in_x' => 'Recent questions in ^',
@@ -178,11 +177,14 @@
 		'unupvoteda_qs_in_x' => 'Questions without an upvoted answer in ^',
 		'unupvoteda_qs_title' => 'Recent questions without an upvoted answer',
 		'upload_limit' => 'Too many uploads - please try again in an hour',
+		'view_q_must_be_approved' => 'Your account must be approved to view question pages.',
 		'view_q_must_confirm' => 'Please ^5confirm your email address^6 to view question pages.',
 		'view_q_must_login' => 'Please ^1log in^2 or ^3register^4 to view question pages.',
 		'viewed_qs_in_x' => 'Most viewed questions in ^',
 		'viewed_qs_title' => 'Most viewed questions',
+		'vote_disabled_approve' => 'You account must be approved before you can vote',
 		'vote_disabled_down' => 'Voting down is only available to some users',
+		'vote_disabled_down_approve' => 'Your account must be approved before you can vote down',
 		'vote_disabled_hidden_a' => 'You cannot vote on hidden answers',
 		'vote_disabled_hidden_q' => 'You cannot vote on hidden questions',
 		'vote_disabled_level' => 'Voting is only available to some users',
@@ -200,6 +202,7 @@
 		'voted_qs_in_x' => 'Highest voted questions in ^',
 		'voted_qs_title' => 'Highest voted questions',
 		'voted_up_popup' => 'You have voted this up - click to remove vote',
+		'written' => '', // blank in English - placeholder for other languages
 		'x_ago' => '^ ago',
 		'x_answers' => '^ answers',
 		'x_comments' => '^ comments',

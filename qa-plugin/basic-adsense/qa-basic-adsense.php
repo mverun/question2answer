@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -66,15 +66,15 @@
 					array(
 						'label' => 'AdSense Publisher ID:',
 						'value' => qa_html(qa_opt('adsense_publisher_id')),
-						'tags' => 'NAME="adsense_publisher_id_field"',
-						'note' => 'Example: <I>pub-1234567890123456</I>',
+						'tags' => 'name="adsense_publisher_id_field"',
+						'note' => 'Example: <i>pub-1234567890123456</i>',
 					),
 				),
 				
 				'buttons' => array(
 					array(
 						'label' => 'Save Changes',
-						'tags' => 'NAME="adsense_save_button"',
+						'tags' => 'name="adsense_save_button"',
 					),
 				),
 			);
@@ -104,14 +104,13 @@
 			
 ?>
 <div style="<?php echo $divstyle?>">
-<script type="text/javascript"><!--
+<script type="text/javascript">
 google_ad_client = <?php echo qa_js(qa_opt('adsense_publisher_id'))?>;
 google_ad_width = <?php echo qa_js($width)?>;
 google_ad_height = <?php echo qa_js($height)?>;
 google_ad_format = <?php echo qa_js($format)?>;
 google_ad_type = "text_image";
 google_ad_channel = "";
-//-->
 </script>
 <script type="text/javascript"
 src="http://pagead2.googlesyndication.com/pagead/show_ads.js">

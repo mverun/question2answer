@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -57,7 +57,7 @@
 						'type' => 'number',
 						'value' => (int)qa_opt('tag_cloud_count_tags'),
 						'suffix' => 'tags',
-						'tags' => 'NAME="tag_cloud_count_tags_field"',
+						'tags' => 'name="tag_cloud_count_tags_field"',
 					),
 
 					array(
@@ -65,21 +65,21 @@
 						'suffix' => 'pixels',
 						'type' => 'number',
 						'value' => (int)qa_opt('tag_cloud_font_size'),
-						'tags' => 'NAME="tag_cloud_font_size_field"',
+						'tags' => 'name="tag_cloud_font_size_field"',
 					),
 					
 					array(
 						'label' => 'Font size represents tag popularity',
 						'type' => 'checkbox',
 						'value' => qa_opt('tag_cloud_size_popular'),
-						'tags' => 'NAME="tag_cloud_size_popular_field"',
+						'tags' => 'name="tag_cloud_size_popular_field"',
 					),
 				),
 				
 				'buttons' => array(
 					array(
 						'label' => 'Save Changes',
-						'tags' => 'NAME="tag_cloud_save_button"',
+						'tags' => 'name="tag_cloud_save_button"',
 					),
 				),
 			);
@@ -131,24 +131,28 @@
 			$maxcount=current($populartags);
 			
 			$themeobject->output(
-				'<H2 STYLE="margin-top:0; padding-top:0;">',
+				'<h2 style="margin-top:0; padding-top:0;">',
 				qa_lang_html('main/popular_tags'),
-				'</H2>'
+				'</h2>'
 			);
 			
-			$themeobject->output('<DIV STYLE="font-size:10px;">');
+			$themeobject->output('<div style="font-size:10px;">');
 			
 			$maxsize=qa_opt('tag_cloud_font_size');
 			$scale=qa_opt('tag_cloud_size_popular');
+			$blockwordspreg=qa_get_block_words_preg();
 			
 			foreach ($populartags as $tag => $count) {
+				if (count(qa_block_words_match_all($tag, $blockwordspreg)))
+					continue; // skip censored tags
+					
 				$size=number_format(($scale ? ($maxsize*$count/$maxcount) : $maxsize), 1);
 				
 				if (($size>=5) || !$scale)
-					$themeobject->output('<A HREF="'.qa_path_html('tag/'.$tag).'" STYLE="font-size:'.$size.'px; vertical-align:baseline;">'.qa_html($tag).'</A>');
+					$themeobject->output('<a href="'.qa_path_html('tag/'.$tag).'" style="font-size:'.$size.'px; vertical-align:baseline;">'.qa_html($tag).'</a>');
 			}
 			
-			$themeobject->output('</DIV>');
+			$themeobject->output('</div>');
 		}
 	
 	}

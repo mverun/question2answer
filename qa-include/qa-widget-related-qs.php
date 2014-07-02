@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -25,6 +25,9 @@
 */
 
 	class qa_related_qs {
+		
+		var $voteformcode;
+		
 		
 		function allow_template($template)
 		{
@@ -62,42 +65,46 @@
 			
 			if ($region=='side') {
 				$themeobject->output(
-					'<DIV CLASS="qa-related-qs">',
-					'<H2 STYLE="margin-top:0; padding-top:0;">',
+					'<div class="qa-related-qs">',
+					'<h2 style="margin-top:0; padding-top:0;">',
 					$titlehtml,
-					'</H2>'
+					'</h2>'
 				);
 				
-				$themeobject->output('<UL CLASS="qa-related-q-list">');
+				$themeobject->output('<ul class="qa-related-q-list">');
 
 				foreach ($questions as $question)
-					$themeobject->output('<LI CLASS="qa-related-q-item"><A HREF="'.qa_q_path_html($question['postid'], $question['title']).'">'.qa_html($question['title']).'</A></LI>');
+					$themeobject->output('<li class="qa-related-q-item"><a href="'.qa_q_path_html($question['postid'], $question['title']).'">'.qa_html($question['title']).'</a></li>');
 
 				$themeobject->output(
-					'</UL>',
-					'</DIV>'
+					'</ul>',
+					'</div>'
 				);
 
 			} else {
 				$themeobject->output(
-					'<H2>',
+					'<h2>',
 					$titlehtml,
-					'</H2>'
+					'</h2>'
 				);
 
 				$q_list=array(
 					'form' => array(
-						'tags' => 'METHOD="POST" ACTION="'.qa_self_html().'"',
+						'tags' => 'method="post" action="'.qa_self_html().'"',
+
+						'hidden' => array(
+							'code' => qa_get_form_security_code('vote'),
+						),
 					),
 					
 					'qs' => array(),
 				);
 				
-				$options=qa_post_html_defaults('Q');
+				$defaults=qa_post_html_defaults('Q');
 				$usershtml=qa_userids_handles_html($questions);
 				
 				foreach ($questions as $question)
-					$q_list['qs'][]=qa_post_html_fields($question, $userid, $cookieid, $usershtml, null, $options);
+					$q_list['qs'][]=qa_post_html_fields($question, $userid, $cookieid, $usershtml, null, qa_post_html_options($question, $defaults));
 
 				$themeobject->q_list_and_form($q_list);
 			}

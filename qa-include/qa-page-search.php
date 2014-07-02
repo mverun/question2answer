@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -90,30 +90,29 @@
 			$qa_content['title']=qa_lang_html_sub('main/no_results_for_x', qa_html($inquery));
 			
 		$qa_content['q_list']['form']=array(
-			'tags' => 'METHOD="POST" ACTION="'.qa_self_html().'"',
+			'tags' => 'method="post" action="'.qa_self_html().'"',
+
+			'hidden' => array(
+				'code' => qa_get_form_security_code('vote'),
+			),
 		);
 		
 		$qa_content['q_list']['qs']=array();
 		
-		$questionoptions=qa_post_html_defaults('Q');
+		$qdefaults=qa_post_html_defaults('Q');
 		
 		foreach ($results as $result)
 			if (!isset($result['question'])) { // if we have any non-question results, display with less statistics
-				$questionoptions['voteview']=false;
-				$questionoptions['answersview']=false;
-				$questionoptions['viewsview']=false;
-
-				$fakeoptions=$questionoptions;
-				$fakeoptions['whoview']=false;
-				$fakeoptions['whenview']=false;
-				$fakeoptions['whatview']=false;
-				
+				$qdefaults['voteview']=false;
+				$qdefaults['answersview']=false;
+				$qdefaults['viewsview']=false;
 				break;
 			}
 		
 		foreach ($results as $result) {
 			if (isset($result['question']))
-				$fields=qa_post_html_fields($result['question'], $userid, qa_cookie_get(), $usershtml, null, $questionoptions);
+				$fields=qa_post_html_fields($result['question'], $userid, qa_cookie_get(),
+					$usershtml, null, qa_post_html_options($result['question'], $qdefaults));
 			
 			elseif (isset($result['url']))
 				$fields=array(
@@ -124,6 +123,9 @@
 			else
 				continue; // nothing to show here
 			
+			if (isset($qdefaults['blockwordspreg']))
+				$result['title']=qa_block_words_replace($result['title'], $qdefaults['blockwordspreg']);
+				
 			$fields['title']=qa_html($result['title']);
 			$fields['url']=qa_html($result['url']);
 			

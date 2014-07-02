@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -47,6 +47,7 @@
 
 	if (!QA_FINAL_EXTERNAL_USERS) { // login modules don't work with external user integration
 		qa_register_plugin_module('login', 'qa-facebook-login.php', 'qa_facebook_login', 'Facebook Login');
+		qa_register_plugin_module('page', 'qa-facebook-login-page.php', 'qa_facebook_login_page', 'Facebook Login Page');
 		qa_register_plugin_layer('qa-facebook-layer.php', 'Facebook Login Layer');
 	}
 	

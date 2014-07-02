@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -58,13 +58,13 @@
 					'public' => array(
 						'label' => 'reCAPTCHA public key:',
 						'value' => qa_opt('recaptcha_public_key'),
-						'tags' => 'NAME="recaptcha_public_key_field"',
+						'tags' => 'name="recaptcha_public_key_field"',
 					),
 
 					'private' => array(
 						'label' => 'reCAPTCHA private key:',
 						'value' => qa_opt('recaptcha_private_key'),
-						'tags' => 'NAME="recaptcha_private_key_field"',
+						'tags' => 'name="recaptcha_private_key_field"',
 						'error' => $this->recaptcha_error_html(),
 					),
 				),
@@ -72,7 +72,7 @@
 				'buttons' => array(
 					array(
 						'label' => 'Save Changes',
-						'tags' => 'NAME="recaptcha_save_button"',
+						'tags' => 'name="recaptcha_save_button"',
 					),
 				),
 			);
@@ -91,7 +91,7 @@
 				
 				$url=recaptcha_get_signup_url(@$_SERVER['HTTP_HOST'], qa_opt('site_title'));
 				
-				return 'To use reCAPTCHA, you must <A HREF="'.qa_html($url).'">sign up</A> to get these keys.';
+				return 'To use reCAPTCHA, you must <a href="'.qa_html($url).'">sign up</a> to get these keys.';
 			}
 			
 			return null;				
@@ -113,10 +113,10 @@
 				$language='en';
 				
 			$qa_content['script_lines'][]=array(
-				"var RecaptchaOptions = {",
+				"var RecaptchaOptions={",
 				"\ttheme:'white',",
 				"\tlang:".qa_js($language),
-				"}",
+				"};",
 			);
 		
 			return recaptcha_get_html(qa_opt('recaptcha_public_key'), $error, qa_is_https_probably());

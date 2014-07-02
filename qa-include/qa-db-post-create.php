@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -30,14 +30,15 @@
 	}
 
 
-	function qa_db_post_create($type, $parentid, $userid, $cookieid, $ip, $title, $content, $format, $tagstring, $notify, $categoryid=null)
+	function qa_db_post_create($type, $parentid, $userid, $cookieid, $ip, $title, $content, $format, $tagstring, $notify, $categoryid=null, $name=null)
 /*
 	Create a new post in the database and return its ID (based on auto-incrementing)
 */
 	{
 		qa_db_query_sub(
-			'INSERT INTO ^posts (categoryid, type, parentid, userid, cookieid, createip, title, content, format, tags, notify, created) VALUES (#, $, #, $, #, INET_ATON($), $, $, $, $, $, NOW())',
-			$categoryid, $type, $parentid, $userid, $cookieid, $ip, $title, $content, $format, $tagstring, $notify
+			'INSERT INTO ^posts (categoryid, type, parentid, userid, cookieid, createip, title, content, format, tags, notify, name, created) '.
+			'VALUES (#, $, #, $, #, INET_ATON($), $, $, $, $, $, $, NOW())',
+			$categoryid, $type, $parentid, $userid, $cookieid, $ip, $title, $content, $format, $tagstring, $notify, $name
 		);
 		
 		return qa_db_last_insert_id();
@@ -330,7 +331,7 @@
 */
 	{
 		if (qa_should_update_counts())
-			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unaqcount', COUNT(*) FROM ^posts WHERE type='Q' AND acount=0");
+			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unaqcount', COUNT(*) FROM ^posts WHERE type='Q' AND acount=0 AND closedbyid IS NULL");
 	}
 	
 	
@@ -340,7 +341,7 @@
 */
 	{
 		if (qa_should_update_counts())
-			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unselqcount', COUNT(*) FROM ^posts WHERE type='Q' AND selchildid IS NULL");
+			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unselqcount', COUNT(*) FROM ^posts WHERE type='Q' AND selchildid IS NULL AND closedbyid IS NULL");
 	}
 	
 	
@@ -350,7 +351,17 @@
 */
 	{
 		if (qa_should_update_counts())
-			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unupaqcount', COUNT(*) FROM ^posts WHERE type='Q' AND amaxvote=0");
+			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_unupaqcount', COUNT(*) FROM ^posts WHERE type='Q' AND amaxvote=0 AND closedbyid IS NULL");
+	}
+	
+	
+	function qa_db_queuedcount_update()
+/*
+	Update the cached count in the database of the number of posts which are queued for moderation
+*/
+	{
+		if (qa_should_update_counts())
+			qa_db_query_sub("REPLACE ^options (title, content) SELECT 'cache_queuedcount', COUNT(*) FROM ^posts WHERE type IN ('Q_QUEUED', 'A_QUEUED', 'C_QUEUED')");
 	}
 
 /*

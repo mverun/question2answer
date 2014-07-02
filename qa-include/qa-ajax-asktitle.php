@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -96,10 +96,10 @@
 				break;
 				
 			if (!$count)
-				echo qa_lang_html('question/ask_same_q').'<BR/>';
+				echo qa_lang_html('question/ask_same_q').'<br/>';
 			
 			echo strtr(
-				'<A HREF="'.qa_q_path_html($question['postid'], $question['title']).'" TARGET="_blank">'.qa_html($question['title']).'</A><BR/>',
+				'<a href="'.qa_q_path_html($question['postid'], $question['title']).'" target="_blank">'.qa_html($question['title']).'</a><br/>',
 				"\r\n", '  '
 			)."\n";
 			

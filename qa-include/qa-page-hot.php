@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -41,7 +41,7 @@
 	$start=qa_get_start();
 	$userid=qa_get_logged_in_userid();
 	
-	@list($questions, $categories, $categoryid)=qa_db_select_with_pending(
+	list($questions, $categories, $categoryid)=qa_db_select_with_pending(
 		qa_db_qs_selectspec($userid, 'hotness', $start, $categoryslugs, null, false, false, qa_opt_if_loaded('page_size_hot_qs')),
 		qa_db_category_nav_selectspec($categoryslugs, false, false, true),
 		$countslugs ? qa_db_slugs_to_category_id_selectspec($categoryslugs) : null
@@ -72,8 +72,8 @@
 		$nonetitle, // title if no questions
 		QA_ALLOW_UNINDEXED_QUERIES ? $categories : null, // categories for navigation
 		$categoryid, // selected category id
-		true, // show question counts in category navigation (null since not relevant)
-		QA_ALLOW_UNINDEXED_QUERIES ? 'hot/' : null, // prefix for links in category navigation (null since no navigation)
+		true, // show question counts in category navigation
+		QA_ALLOW_UNINDEXED_QUERIES ? 'hot/' : null, // prefix for links in category navigation (null if no navigation)
 		qa_opt('feed_for_hot') ? 'hot' : null, // prefix for RSS feed paths (null to hide)
 		qa_html_suggest_ask() // suggest what to do next
 	);

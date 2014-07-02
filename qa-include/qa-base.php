@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -25,8 +25,8 @@
 */
 
 	
-	define('QA_VERSION', '1.5.4'); // also used as suffix for .js and .css requests
-	define('QA_BUILD_DATE', '2012-11-29');
+	define('QA_VERSION', '1.6.3'); // also used as suffix for .js and .css requests
+	define('QA_BUILD_DATE', '2014-01-19');
 
 //	Execution section of this file - remainder contains function definitions
 
@@ -314,7 +314,8 @@
 		$functionindex=array();
 
 		foreach ($qa_override_files as $index => $override) {
-			$functionsphp=file_get_contents($override['directory'].$override['include']);
+			$filename=$override['directory'].$override['include'];
+			$functionsphp=file_get_contents($filename);
 			
 			preg_match_all('/\Wfunction\s+(qa_[a-z_]+)\s*\(/im', $functionsphp, $rawmatches, PREG_PATTERN_ORDER|PREG_OFFSET_CAPTURE);
 			
@@ -342,9 +343,9 @@
 						$functionsphp=substr_replace($functionsphp, $newname, $searchmatch[1], strlen($searchmatch[0]));
 				}
 			
-		//	echo '<PRE STYLE="text-align:left;">'.htmlspecialchars($functionsphp).'</PRE>'; // to debug munged code
+		//	echo '<pre style="text-align:left;">'.htmlspecialchars($functionsphp).'</pre>'; // to debug munged code
 			
-			eval('?'.'>'.$functionsphp);
+			qa_eval_from_file($functionsphp, $filename);
 		}
 	}
 	
@@ -493,6 +494,35 @@
 	
 //	Low-level functions used throughout Q2A
 
+	function qa_eval_from_file($eval, $filename)
+/*
+	Calls eval() on the PHP code in $eval which came from the file $filename. It supplements PHP's regular error reporting by
+	displaying/logging (as appropriate) the original source filename, if an error occurred when evaluating the code.
+*/
+	{
+		// could also use ini_set('error_append_string') but apparently it doesn't work for errors logged on disk
+		
+		global $php_errormsg;
+		
+		$oldtrackerrors=@ini_set('track_errors', 1);
+		$php_errormsg=null; 
+		
+		eval('?'.'>'.$eval);
+		
+		if (strlen($php_errormsg)) {
+			switch (strtolower(@ini_get('display_errors'))) {
+				case 'on': case '1': case 'yes': case 'true': case 'stdout': case 'stderr':
+					echo ' of '.qa_html($filename)."\n";
+					break;
+			}
+
+			@error_log('PHP Question2Answer more info: '.$php_errormsg." in eval()'d code from ".qa_html($filename));
+		}
+		
+		@ini_set('track_errors', $oldtrackerrors);
+	}
+	
+	
 	function qa_call($function, $args)
 /*
 	Call $function with the arguments in the $args array (doesn't work with call-by-reference functions)
@@ -567,15 +597,14 @@
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
 		
-		echo 'Question2Answer fatal error:<P><FONT COLOR="red">'.qa_html($message, true).'</FONT></P>';
+		echo 'Question2Answer fatal error:<p><font color="red">'.qa_html($message, true).'</font></p>';
 		@error_log('PHP Question2Answer fatal error: '.$message);
-		echo '<P>Stack trace:<P>';
+		echo '<p>Stack trace:<p>';
 
 		$backtrace=array_reverse(array_slice(debug_backtrace(), 1));
 		foreach ($backtrace as $trace)
-			echo '<FONT COLOR="#'.((strpos(@$trace['file'], '/qa-plugin/')!==false) ? 'f00' : '999').'">'.
-				qa_html(@$trace['function'].'() '.@$trace['file'].':'.@$trace['line']).'</FONT><BR>';
-		
+			echo '<font color="#'.((strpos(@$trace['file'], '/qa-plugin/')!==false) ? 'f00' : '999').'">'.
+				qa_html(@$trace['function'].'() in '.basename(@$trace['file']).':'.@$trace['line']).'</font><br>';	
 		
 		qa_exit('error');
 	}
@@ -635,7 +664,7 @@
 				$object=new $module['class'];
 				
 				if (method_exists($object, 'load_module'))
-					$object->load_module($module['directory'], qa_path_to_root().$module['urltoroot']);
+					$object->load_module($module['directory'], qa_path_to_root().$module['urltoroot'], $type, $name);
 				
 				$qa_modules[$type][$name]['object']=$object;
 				return $object;
@@ -704,7 +733,7 @@
 		
 		$safe=htmLawed($html, array(
 			'safe' => 1,
-			'elements' => '*+embed+object',
+			'elements' => '*+embed+object-form',
 			'schemes' => 'href: aim, feed, file, ftp, gopher, http, https, irc, mailto, news, nntp, sftp, ssh, telnet; *:file, http, https; style: !; classid:clsid',
 			'keep_bad' => 0,
 			'anti_link_spam' => array('/.*/', ''),
@@ -742,9 +771,18 @@
 	}
 	
 	
+	function qa_xml($string)
+/*
+	Return XML representation of $string, which is similar to HTML but ASCII control characters are also disallowed
+*/
+	{
+		return htmlspecialchars(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string)$string));
+	}
+	
+	
 	function qa_js($value, $forcequotes=false)
 /*
-	Return JavaScript representation of $value, putting in quotes if non-numeric or if $forcequote is true
+	Return JavaScript representation of $value, putting in quotes if non-numeric or if $forcequotes is true
 */
 	{
 		if (is_numeric($value) && !$forcequotes)
@@ -856,12 +894,13 @@
 	
 	function qa_clicked($name)
 /*
-	Return true if form button $name was clicked (as TYPE=SUBMIT/IMAGE) to create this page request.
+	Return true if form button $name was clicked (as type=submit/image) to create this page request, or if a
+	simulated click was sent for the button (via 'qa_click' POST field)
 */
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
 		
-		return isset($_POST[$name]) || isset($_POST[$name.'_x']);
+		return isset($_POST[$name]) || isset($_POST[$name.'_x']) || (qa_post_text('qa_click')==$name);
 	}
 
 	
@@ -1166,6 +1205,15 @@
 	{
 		return qa_html(qa_path($request, $params, $rooturl, $neaturls, $anchor));
 	}
+	
+	
+	function qa_path_absolute($request, $params=null, $anchor=null)
+/*
+	Return the absolute URI for $request - see qa_path() for other parameters
+*/
+	{
+		return qa_path($request, $params, qa_opt('site_url'), null, $anchor);
+	}
 
 	
 	function qa_q_request($questionid, $title)
@@ -1227,7 +1275,7 @@
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
 		
-		if ( (($showtype=='A') || ($showtype=='C')) && isset($showid))  {
+		if ( (($showtype=='Q') || ($showtype=='A') || ($showtype=='C')) && isset($showid))  {
 			$params=array('show' => $showid); // due to pagination
 			$anchor=qa_anchor($showtype, $showid);
 		
@@ -1262,7 +1310,7 @@
 	
 	function qa_self_html()
 /*
-	Return an HTML-ready relative URL for the current page, preserving GET parameters - this is useful for ACTION in FORMs
+	Return an HTML-ready relative URL for the current page, preserving GET parameters - this is useful for action="..." in HTML forms
 */
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
@@ -1275,7 +1323,7 @@
 
 	function qa_path_form_html($request, $params=null, $rooturl=null, $neaturls=null, $anchor=null)
 /*
-	Return HTML for hidden fields to insert into a <FORM METHOD="GET"...> on the page.
+	Return HTML for hidden fields to insert into a <form method="get"...> on the page.
 	This is needed because any parameters on the URL will be lost when the form is submitted.
 */
 	{
@@ -1290,7 +1338,7 @@
 			
 			foreach ($params as $param)
 				if (preg_match('/^([^\=]*)(\=(.*))?$/', $param, $matches))
-					$formhtml.='<INPUT TYPE="hidden" NAME="'.qa_html(urldecode($matches[1])).'" VALUE="'.qa_html(urldecode(@$matches[3])).'"/>';
+					$formhtml.='<input type="hidden" name="'.qa_html(urldecode($matches[1])).'" value="'.qa_html(urldecode(@$matches[3])).'"/>';
 		}
 		
 		return $formhtml;

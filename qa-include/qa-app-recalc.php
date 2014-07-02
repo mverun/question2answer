@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -34,7 +34,7 @@
 	^tagwords (all): index of words in tags of posts (a tag can contain multiple words)
 	^posttags (all): index tags of posts
 	^words (all): list of words used for indexes
-	^options (title=cache_qcount|cache_acount|cache_ccount|cache_tagcount|cache_unaqcount): total Qs, As, Cs, tags, unanswered Qs
+	^options (title=cache_*): cached values for various things (e.g. counting questions)
 	
 	Recalculated in dorecountposts:
 	==============================
@@ -70,6 +70,7 @@
 	require_once QA_INCLUDE_DIR.'qa-db-points.php';
 	require_once QA_INCLUDE_DIR.'qa-db-selects.php';
 	require_once QA_INCLUDE_DIR.'qa-db-admin.php';
+	require_once QA_INCLUDE_DIR.'qa-db-users.php';
 	require_once QA_INCLUDE_DIR.'qa-app-options.php';
 	require_once QA_INCLUDE_DIR.'qa-app-post-create.php';
 	require_once QA_INCLUDE_DIR.'qa-app-post-update.php';
@@ -83,7 +84,7 @@
 	{
 		$continue=false;
 		
-		@list($operation, $length, $next, $done)=explode(',', $state);
+		@list($operation, $length, $next, $done)=explode("\t", $state);
 		
 		switch ($operation) {
 			case 'doreindexcontent':
@@ -228,23 +229,30 @@
 				
 			case 'dorecalcpoints_usercount':
 				qa_db_userpointscount_update(); // for progress update - not necessarily accurate
+				qa_db_uapprovecount_update(); // needs to be somewhere and this is the most appropriate place
 				qa_recalc_transition($state, 'dorecalcpoints_recalc');
 				break;
 				
 			case 'dorecalcpoints_recalc':
-				$userids=qa_db_users_get_for_recalc_points($next, 10);
+				$recalccount=10;
+				$userids=qa_db_users_get_for_recalc_points($next, $recalccount+1); // get one extra so we know where to start from next
+				$gotcount=count($userids);
+				$recalccount=min($recalccount, $gotcount); // can't recalc more than we got
 				
-				if (count($userids)) {
-					$lastuserid=max($userids);
+				if ($recalccount>0) {
+					$lastuserid=$userids[$recalccount-1];
+					qa_db_users_recalc_points($next, $lastuserid);					
+					$done+=$recalccount;
 					
-					qa_db_users_recalc_points($next, $lastuserid);
-					
-					$next=1+$lastuserid;
-					$done+=count($userids);
+				} else
+					$lastuserid=$next; // for truncation
+
+				if ($gotcount>$recalccount) { // more left to do
+					$next=$userids[$recalccount]; // start next round at first one not recalculated
 					$continue=true;
-				
+
 				} else {
-					qa_db_truncate_userpoints($next);
+					qa_db_truncate_userpoints($lastuserid);
 					qa_db_userpointscount_update(); // quick so just do it here
 					qa_recalc_transition($state, 'dorecalcpoints_complete');
 				}
@@ -294,7 +302,16 @@
 						foreach ($posts as $postid => $post) {
 							$followonq=($post['basetype']=='Q') && ($postid!=$questionid);
 							
-							qa_create_event_for_q_user($questionid, $postid, $followonq ? QA_UPDATE_FOLLOWS : null, $post['userid'], @$posts[$post['parentid']]['userid'], $post['created']);
+							if ($followonq)
+								$updatetype=QA_UPDATE_FOLLOWS;
+							elseif ( ($post['basetype']=='C') && (@$posts[$post['parentid']]['basetype']=='Q') )
+								$updatetype=QA_UPDATE_C_FOR_Q;
+							elseif ( ($post['basetype']=='C') && (@$posts[$post['parentid']]['basetype']=='A') )
+								$updatetype=QA_UPDATE_C_FOR_A;
+							else
+								$updatetype=null;
+							
+							qa_create_event_for_q_user($questionid, $postid, $updatetype, $post['userid'], @$posts[$post['parentid']]['userid'], $post['created']);
 							
 							if (isset($post['updated']) && !$followonq)
 								qa_create_event_for_q_user($questionid, $postid, $post['updatetype'], $post['lastuserid'], $post['userid'], $post['updated']);
@@ -323,7 +340,7 @@
 							foreach ($comments as $comment) {
 								foreach ($keyuserids as $keyuserid => $dummy)
 									if ( ($keyuserid != $comment['userid']) && ($keyuserid != @$posts[$parentid]['userid']) )
-										qa_db_event_create_not_entity($keyuserid, $questionid, $comment['postid'], null, $comment['userid'], $comment['created']);
+										qa_db_event_create_not_entity($keyuserid, $questionid, $comment['postid'], QA_UPDATE_FOLLOWS, $comment['userid'], $comment['created']);
 
 								if (isset($comment['userid']))
 									$keyuserids[$comment['userid']]=true;
@@ -460,6 +477,51 @@
 				} else
 					qa_recalc_transition($state, 'dodeletehidden_complete');
 				break;
+				
+			case 'doblobstodisk':
+				qa_recalc_transition($state, 'doblobstodisk_move');
+				break;
+				
+			case 'doblobstodisk_move':
+				$blob=qa_db_get_next_blob_in_db($next);
+				
+				if (isset($blob)) {
+					require_once QA_INCLUDE_DIR.'qa-app-blobs.php';
+					require_once QA_INCLUDE_DIR.'qa-db-blobs.php';
+					
+					if (qa_write_blob_file($blob['blobid'], $blob['content'], $blob['format']))
+						qa_db_blob_set_content($blob['blobid'], null);
+						
+					$next=1+$blob['blobid'];
+					$done++;
+					$continue=true;
+				
+				} else
+					qa_recalc_transition($state, 'doblobstodisk_complete');
+				break;
+				
+			case 'doblobstodb':
+				qa_recalc_transition($state, 'doblobstodb_move');
+				break;
+			
+			case 'doblobstodb_move':
+				$blob=qa_db_get_next_blob_on_disk($next);
+				
+				if (isset($blob)) {
+					require_once QA_INCLUDE_DIR.'qa-app-blobs.php';
+					require_once QA_INCLUDE_DIR.'qa-db-blobs.php';
+					
+					$content=qa_read_blob_file($blob['blobid'], $blob['format']);
+					qa_db_blob_set_content($blob['blobid'], $content);
+					qa_delete_blob_file($blob['blobid'], $blob['format']);
+						
+					$next=1+$blob['blobid'];
+					$done++;
+					$continue=true;
+				
+				} else
+					qa_recalc_transition($state, 'doblobstodb_complete');
+				break;
 
 			default:
 				$state='';
@@ -467,7 +529,7 @@
 		}
 		
 		if ($continue)
-			$state=$operation.','.$length.','.$next.','.$done;
+			$state=$operation."\t".$length."\t".$next."\t".$done;
 		
 		return $continue && ($done<$length);
 	}
@@ -478,7 +540,11 @@
 	Change the $state to represent the beginning of a new $operation
 */
 	{
-		$state=$operation.','.qa_recalc_stage_length($operation).',0,0';
+		$length=qa_recalc_stage_length($operation);
+		$next=(QA_FINAL_EXTERNAL_USERS && ($operation=='dorecalcpoints_recalc')) ? '' : 0;
+		$done=0;
+		
+		$state=$operation."\t".$length."\t".$next."\t".$done;
 	}
 
 		
@@ -530,6 +596,14 @@
 			case 'dodeletehidden_questions':
 				$length=count(qa_db_posts_get_for_deleting('Q'));
 				break;
+				
+			case 'doblobstodisk_move':
+				$length=qa_db_count_blobs_in_db();
+				break;
+			
+			case 'doblobstodb_move':
+				$length=qa_db_count_blobs_on_disk();
+				break;
 			
 			default:
 				$length=0;
@@ -545,7 +619,7 @@
 	Return a string which gives a user-viewable version of $state
 */
 	{
-		@list($operation, $length, $next, $done)=explode(',', $state);
+		@list($operation, $length, $next, $done)=explode("\t", $state);
 		
 		$done=(int)$done;
 		$length=(int)$length;
@@ -675,6 +749,19 @@
 
 			case 'dodeletehidden_complete':
 				$message=qa_lang('admin/delete_hidden_complete');
+				break;
+				
+			case 'doblobstodisk_move':
+			case 'doblobstodb_move':
+				$message=strtr(qa_lang('admin/blobs_move_moved'), array(
+					'^1' => number_format($done),
+					'^2' => number_format($length)
+				));
+				break;
+				
+			case 'doblobstodisk_complete':
+			case 'doblobstodb_complete':
+				$message=qa_lang('admin/blobs_move_complete');
 				break;
 			
 			default:

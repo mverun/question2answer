@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -66,6 +66,19 @@
 	multiple Q2A sites to have shared logins and users, but separate posts and activity.
 
 	define('QA_MYSQL_USERS_PREFIX', 'qa_users_');
+*/
+
+/*
+	If you wish, you can define QA_BLOBS_DIRECTORY to store BLOBs (binary large objects) such
+	as avatars and uploaded files on disk, rather than in the database. If so this directory
+	must be writable by the web server process - on Unix/Linux use chown/chmod as appropriate.
+	Note than if multiple Q2A sites are using QA_MYSQL_USERS_PREFIX to share users, they must
+	also have the same value for QA_BLOBS_DIRECTORY.
+
+	If there are already some BLOBs stored in the database from previous uploads, click the
+	'Move BLOBs to disk' button in the 'Stats' section of the admin panel to move them to disk. 
+		
+	define('QA_BLOBS_DIRECTORY', '/path/to/writable_blobs_directory/');
 */
 
 /*

@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -234,8 +234,8 @@
 	{
 		if (QA_FINAL_EXTERNAL_USERS)
 			return qa_db_read_all_values(qa_db_query_sub(
-				'(SELECT DISTINCT userid FROM ^posts WHERE userid>=# ORDER BY userid LIMIT #) UNION (SELECT DISTINCT userid FROM ^uservotes WHERE userid>=# ORDER BY userid LIMIT #)',
-				$startuserid, $count, $startuserid, $count
+				'SELECT userid FROM ((SELECT DISTINCT userid FROM ^posts WHERE userid>=# ORDER BY userid LIMIT #) UNION (SELECT DISTINCT userid FROM ^uservotes WHERE userid>=# ORDER BY userid LIMIT #)) x ORDER BY userid LIMIT #',
+				$startuserid, $count, $startuserid, $count, $count
 			));
 		else
 			return qa_db_read_all_values(qa_db_query_sub(
@@ -298,14 +298,14 @@
 	}
 
 	
-	function qa_db_truncate_userpoints($firstuserid)
+	function qa_db_truncate_userpoints($lastuserid)
 /*
-	Remove any rows in the userpoints table from $firstuserid upwards
+	Remove any rows in the userpoints table where userid is greater than $lastuserid
 */
 	{
 		qa_db_query_sub(
-			'DELETE FROM ^userpoints WHERE userid>=#',
-			$firstuserid
+			'DELETE FROM ^userpoints WHERE userid>#',
+			$lastuserid
 		);
 	}
 	
@@ -377,7 +377,51 @@
 			$type.'_HIDDEN', $startpostid
 		));
 	}
+	
+	
+//	For moving blobs between database and disk...
 
+	function qa_db_count_blobs_in_db()
+/*
+	Return the number of blobs whose content is stored in the database, rather than on disk
+*/
+	{
+		return qa_db_read_one_value(qa_db_query_sub('SELECT COUNT(*) FROM ^blobs WHERE content IS NOT NULL'));
+	}
+
+
+	function qa_db_get_next_blob_in_db($startblobid)
+/*
+	Return the id, content and format of the first blob whose content is stored in the database starting from $startblobid
+*/
+	{
+		return qa_db_read_one_assoc(qa_db_query_sub(
+			'SELECT blobid, content, format FROM ^blobs WHERE blobid>=# AND content IS NOT NULL',
+			$startblobid
+		), true);
+	}
+
+
+	function qa_db_count_blobs_on_disk()
+/*
+	Return the number of blobs whose content is stored on disk, rather than in the database
+*/
+	{
+		return qa_db_read_one_value(qa_db_query_sub('SELECT COUNT(*) FROM ^blobs WHERE content IS NULL'));
+	}
+
+	
+	function qa_db_get_next_blob_on_disk($startblobid)
+/*
+	Return the id and format of the first blob whose content is stored on disk starting from $startblobid
+*/
+	{
+		return qa_db_read_one_assoc(qa_db_query_sub(
+			'SELECT blobid, format FROM ^blobs WHERE blobid>=# AND content IS NULL',
+			$startblobid
+		), true);
+	}
+		
 
 /*
 	Omit PHP closing tag to help avoid accidental output

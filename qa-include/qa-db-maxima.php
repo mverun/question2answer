@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -39,6 +39,7 @@
 	@define('QA_DB_MAX_CONTENT_LENGTH', 8000);
 	@define('QA_DB_MAX_FORMAT_LENGTH', 20);
 	@define('QA_DB_MAX_TAGS_LENGTH', 800);
+	@define('QA_DB_MAX_NAME_LENGTH', 40);
 	@define('QA_DB_MAX_WORD_LENGTH', 80);
 	@define('QA_DB_MAX_CAT_PAGE_TITLE_LENGTH', 80);
 	@define('QA_DB_MAX_CAT_PAGE_TAGS_LENGTH', 200);
@@ -62,7 +63,7 @@
 	@define('QA_DB_RETRIEVE_USERS', 200);
 	@define('QA_DB_RETRIEVE_ASK_TAG_QS', 500);
 	@define('QA_DB_RETRIEVE_COMPLETE_TAGS', 1000);
-	@define('QA_DB_RETRIEVE_MESSAGES', 10);
+	@define('QA_DB_RETRIEVE_MESSAGES', 20);
 
 	
 //	Keep event streams trimmed - not worth storing too many events per question because we only display the

@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -24,6 +24,7 @@
 	More about this license: http://www.question2answer.org/license.php
 */
 
+
 	class qa_wysiwyg_editor {
 		
 		var $urltoroot;
@@ -37,7 +38,7 @@
 		function option_default($option)
 		{
 			if ($option=='wysiwyg_editor_upload_max_size') {
-				require_once QA_INCLUDE_DIR.'qa-app-blobs.php';
+				require_once QA_INCLUDE_DIR.'qa-app-upload.php';
 				
 				return min(qa_get_max_upload_size(), 1048576);
 			}
@@ -52,7 +53,7 @@
 	
 		function admin_form(&$qa_content)
 		{
-			require_once QA_INCLUDE_DIR.'qa-app-blobs.php';
+			require_once QA_INCLUDE_DIR.'qa-app-upload.php';
 			
 			$saved=false;
 			
@@ -76,7 +77,7 @@
 						'label' => 'Allow images to be uploaded',
 						'type' => 'checkbox',
 						'value' => (int)qa_opt('wysiwyg_editor_upload_images'),
-						'tags' => 'NAME="wysiwyg_editor_upload_images_field" ID="wysiwyg_editor_upload_images_field"',
+						'tags' => 'name="wysiwyg_editor_upload_images_field" id="wysiwyg_editor_upload_images_field"',
 					),
 
 					array(
@@ -84,7 +85,7 @@
 						'label' => 'Allow other content to be uploaded, e.g. Flash, PDF',
 						'type' => 'checkbox',
 						'value' => (int)qa_opt('wysiwyg_editor_upload_all'),
-						'tags' => 'NAME="wysiwyg_editor_upload_all_field"',
+						'tags' => 'name="wysiwyg_editor_upload_all_field"',
 					),
 					
 					array(
@@ -93,14 +94,14 @@
 						'suffix' => 'MB (max '.$this->bytes_to_mega_html(qa_get_max_upload_size()).')',
 						'type' => 'number',
 						'value' => $this->bytes_to_mega_html(qa_opt('wysiwyg_editor_upload_max_size')),
-						'tags' => 'NAME="wysiwyg_editor_upload_max_size_field"',
+						'tags' => 'name="wysiwyg_editor_upload_max_size_field"',
 					),
 				),
 				
 				'buttons' => array(
 					array(
 						'label' => 'Save Changes',
-						'tags' => 'NAME="wysiwyg_editor_save_button"',
+						'tags' => 'name="wysiwyg_editor_save_button"',
 					),
 				),
 			);
@@ -154,61 +155,79 @@
 					", entities:false".
 					($uploadimages ? (", filebrowserImageUploadUrl:".qa_js(qa_path('wysiwyg-editor-upload', array('qa_only_image' => true)))) : "").
 					($uploadall ? (", filebrowserUploadUrl:".qa_js(qa_path('wysiwyg-editor-upload'))) : "").
-					"}"
+					"};"
 				);
 			}		
 				
-			if ($format=='html')
+			if ($format=='html') {
 				$html=$content;
-			else
+				$text=$this->html_to_text($content);
+			} else {
+				$text=$content;
 				$html=qa_html($content, true);
+			}
 			
 			return array(
-				'tags' => 'NAME="'.$fieldname.'"',
-				'value' => qa_html($html),
+				'tags' => 'name="'.$fieldname.'"',
+				'value' => qa_html($text),
 				'rows' => $rows,
+				'html_prefix' => '<input name="'.$fieldname.'_ckeditor_ok" id="'.$fieldname.'_ckeditor_ok" type="hidden" value="0"><input name="'.$fieldname.'_ckeditor_data" id="'.$fieldname.'_ckeditor_data" type="hidden" value="'.qa_html($html).'">',
 			);
 		}
 	
 	
 		function load_script($fieldname)
 		{
-			return "qa_ckeditor_".$fieldname."=CKEDITOR.replace(".qa_js($fieldname).", window.qa_wysiwyg_editor_config);";
+			return "if (qa_ckeditor_".$fieldname."=CKEDITOR.replace(".qa_js($fieldname).", window.qa_wysiwyg_editor_config)) { qa_ckeditor_".$fieldname.".setData(document.getElementById(".qa_js($fieldname.'_ckeditor_data').").value); document.getElementById(".qa_js($fieldname.'_ckeditor_ok').").value=1; }";
 		}
 
 		
 		function focus_script($fieldname)
 		{
-			return "qa_ckeditor_".$fieldname.".focus();";
+			return "if (qa_ckeditor_".$fieldname.") qa_ckeditor_".$fieldname.".focus();";
 		}
 
 		
 		function update_script($fieldname)
 		{
-			return "qa_ckeditor_".$fieldname.".updateElement();";
+			return "if (qa_ckeditor_".$fieldname.") qa_ckeditor_".$fieldname.".updateElement();";
 		}
 
 		
 		function read_post($fieldname)
 		{
-			$html=qa_post_text($fieldname);
+			if (qa_post_text($fieldname.'_ckeditor_ok')) { // CKEditor was loaded successfully
+				$html=qa_post_text($fieldname);
 			
-			$htmlformatting=preg_replace('/<\s*\/?\s*(br|p)\s*\/?\s*>/i', '', $html); // remove <p>, <br>, etc... since those are OK in text
+				$htmlformatting=preg_replace('/<\s*\/?\s*(br|p)\s*\/?\s*>/i', '', $html); // remove <p>, <br>, etc... since those are OK in text
 			
-			if (preg_match('/<.+>/', $htmlformatting)) // if still some other tags, it's worth keeping in HTML
-				return array(
-					'format' => 'html',
-					'content' => qa_sanitize_html($html, false, true), // qa_sanitize_html() is ESSENTIAL for security
-				);
+				if (preg_match('/<.+>/', $htmlformatting)) // if still some other tags, it's worth keeping in HTML
+					return array(
+						'format' => 'html',
+						'content' => qa_sanitize_html($html, false, true), // qa_sanitize_html() is ESSENTIAL for security
+					);
 			
-			else { // convert to text
-				$viewer=qa_load_module('viewer', '');
+				else { // convert to text
+					$viewer=qa_load_module('viewer', '');
 
+					return array(
+						'format' => '',
+						'content' => $this->html_to_text($html),
+					);
+				}
+
+			} else // CKEditor was not loaded so treat it as plain text
 				return array(
 					'format' => '',
-					'content' => $viewer->get_text($html, 'html', array())
+					'content' => qa_post_text($fieldname),
 				);
-			}
+		}
+		
+		function html_to_text($html)
+		{
+			$viewer=qa_load_module('viewer', '');
+
+			return $viewer->get_text($html, 'html', array());
 		}
 	
 	}

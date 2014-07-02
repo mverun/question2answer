@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -59,7 +59,7 @@
 				$response=qa_lang_html_sub('admin/version_get_x', qa_html('v'.$metadata['version']));
 				
 				if (strlen(@$metadata['uri']))
-					$response='<A HREF="'.qa_html($metadata['uri']).'" STYLE="color:#d00;">'.$response.'</A>';
+					$response='<a href="'.qa_html($metadata['uri']).'" style="color:#d00;">'.$response.'</a>';
 			}
 				
 		} else

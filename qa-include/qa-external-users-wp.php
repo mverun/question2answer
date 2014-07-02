@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -124,8 +124,7 @@
 	{
 		$publicusername=$logged_in_user['publicusername'];
 		
-		return '<A HREF="'.htmlspecialchars($relative_url_prefix.'user/'.urlencode($publicusername)).
-			'" CLASS="qa-user-link">'.htmlspecialchars($publicusername).'</A>';
+		return '<a href="'.qa_path_html('user/'.$publicusername).'" class="qa-user-link">'.htmlspecialchars($publicusername).'</a>';
 	}
 
 
@@ -141,8 +140,7 @@
 			$usershtml[$userid]=htmlspecialchars($publicusername);
 			
 			if ($should_include_link)
-				$usershtml[$userid]='<A HREF="'.htmlspecialchars($relative_url_prefix.'user/'.urlencode($publicusername)).
-					'" CLASS="qa-user-link">'.$usershtml[$userid].'</A>';
+				$usershtml[$userid]='<a href="'.qa_path_html('user/'.$publicusername).'" class="qa-user-link">'.$usershtml[$userid].'</a>';
 		}
 			
 		return $usershtml;

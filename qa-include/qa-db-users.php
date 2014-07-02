@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -273,7 +273,7 @@
 */
 	{
 		if ($sync) { // need to lock all tables since any could be used by a plugin's event module
-			$tables=qa_db_list_tables_lc();
+			$tables=qa_db_list_tables();
 
 			$locks=array();
 			foreach ($tables as $table)
@@ -286,6 +286,25 @@
 	}
 	
 	
+	function qa_db_user_levels_set($userid, $userlevels)
+/*
+	Reset the full set of context-specific (currently, per category) user levels for user $userid to $userlevels, where
+	$userlevels is an array of arrays, the inner arrays containing items 'entitytype', 'entityid' and 'level'.
+*/
+	{
+		qa_db_query_sub(
+			'DELETE FROM ^userlevels WHERE userid=$',
+			$userid
+		);
+		
+		foreach ($userlevels as $userlevel)
+			qa_db_query_sub(
+				'REPLACE ^userlevels (userid, entitytype, entityid, level) VALUES ($, $, #, #)',
+				$userid, $userlevel['entitytype'], $userlevel['entityid'], $userlevel['level']
+			);
+	}
+	
+	
 	function qa_db_users_get_mailing_next($lastuserid, $count)
 /*
 	Get the information required for sending a mailing to the next $count users with userids greater than $lastuserid
@@ -295,6 +314,19 @@
 			'SELECT userid, email, handle, emailcode, flags FROM ^users WHERE userid># ORDER BY userid LIMIT #',
 			$lastuserid, $count
 		));
+	}
+	
+	
+	function qa_db_uapprovecount_update()
+/*
+	Update the cached count of the number of users who are awaiting approval after registration
+*/
+	{
+		if ( qa_should_update_counts() && !QA_FINAL_EXTERNAL_USERS )
+			qa_db_query_sub(
+				"REPLACE ^options (title, content) SELECT 'cache_uapprovecount', COUNT(*) FROM ^users WHERE level<# AND NOT (flags&#)",
+				QA_USER_LEVEL_APPROVED, QA_USER_FLAGS_USER_BLOCKED
+			);
 	}
 
 

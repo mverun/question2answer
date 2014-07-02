@@ -1,14 +1,14 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
 	
 	File: qa-include/qa-page-unanswered.php
 	Version: See define()s at top of qa-include/qa-base.php
-	Description: Controller for page listing recent questions without answers
+	Description: Controller for page listing recent questions without upvoted/selected/any answers
 
 
 	This program is free software; you can redistribute it and/or
@@ -60,7 +60,7 @@
 			break;
 	}
 	
-	@list($questions, $categories, $categoryid)=qa_db_select_with_pending(
+	list($questions, $categories, $categoryid)=qa_db_select_with_pending(
 		qa_db_unanswered_qs_selectspec($userid, $selectby, $start, $categoryslugs, false, false, qa_opt_if_loaded('page_size_una_qs')),
 		QA_ALLOW_UNINDEXED_QUERIES ? qa_db_category_nav_selectspec($categoryslugs, false, false, true) : null,
 		$countslugs ? qa_db_slugs_to_category_id_selectspec($categoryslugs) : null
@@ -127,10 +127,10 @@
 		@$count, // total count
 		$sometitle, // title if some questions
 		$nonetitle, // title if no questions
-		QA_ALLOW_UNINDEXED_QUERIES ? $categories : null, // categories for navigation (null since not shown on this page)
-		QA_ALLOW_UNINDEXED_QUERIES ? $categoryid : null, // selected category id (null since not relevant)
-		false, // show question counts in category navigation (null since not relevant)
-		'unanswered/', // prefix for links in category navigation (null since no navigation)
+		QA_ALLOW_UNINDEXED_QUERIES ? $categories : null, // categories for navigation (null if not shown on this page)
+		QA_ALLOW_UNINDEXED_QUERIES ? $categoryid : null, // selected category id (null if not relevant)
+		false, // show question counts in category navigation
+		QA_ALLOW_UNINDEXED_QUERIES ? 'unanswered/' : null, // prefix for links in category navigation (null if no navigation)
 		$feedpathprefix, // prefix for RSS feed paths (null to hide)
 		qa_html_suggest_qs_tags(qa_using_tags()), // suggest what to do next
 		$linkparams, // extra parameters for page links

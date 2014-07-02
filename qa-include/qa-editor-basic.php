@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -52,7 +52,7 @@
 		{
 			return array(
 				'type' => 'textarea',
-				'tags' => 'NAME="'.$fieldname.'" ID="'.$fieldname.'"',
+				'tags' => 'name="'.$fieldname.'" id="'.$fieldname.'"',
 				'value' => qa_html($content),
 				'rows' => $rows,
 			);

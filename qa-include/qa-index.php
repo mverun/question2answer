@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -60,11 +60,8 @@
 				$urlformat=QA_URL_FORMAT_NEAT;
 				$requestparts=explode('/', qa_gpc_to_string($_GET['qa-rewrite']));
 				unset($_GET['qa-rewrite']);
-				$relativedepth=count($requestparts);
 				
-				// Workaround for fact that Apache unescapes characters while rewriting, based on assumption that $_GET['qa-rewrite'] has
-				// right path depth, which is true do long as there are only escaped characters in the last part of the path
-				if (!empty($_SERVER['REQUEST_URI'])) {
+				if (!empty($_SERVER['REQUEST_URI'])) { // workaround for the fact that Apache unescapes characters while rewriting
 					$origpath=$_SERVER['REQUEST_URI'];
 					$_GET=array();
 					
@@ -73,14 +70,29 @@
 						$params=explode('&', substr($origpath, $questionpos+1));
 						
 						foreach ($params as $param)
-							if (preg_match('/^([^\=]*)(\=(.*))?$/', $param, $matches))
-								$_GET[urldecode($matches[1])]=qa_string_to_gpc(urldecode(@$matches[3]));
+							if (preg_match('/^([^\=]*)(\=(.*))?$/', $param, $matches)) {
+								$argument=strtr(urldecode($matches[1]), '.', '_'); // simulate PHP's $_GET behavior
+								$_GET[$argument]=qa_string_to_gpc(urldecode(@$matches[3]));
+							}
 		
 						$origpath=substr($origpath, 0, $questionpos);
 					}
 					
-					$requestparts=array_slice(explode('/', urldecode($origpath)), -count($requestparts));
+					// Generally we assume that $_GET['qa-rewrite'] has the right path depth, but this won't be the case if there's
+					// a & or # somewhere in the middle of the path, due to apache unescaping. So we make a special case for that.
+					$keepparts=count($requestparts);
+					$requestparts=explode('/', urldecode($origpath)); // new request calculated from $_SERVER['REQUEST_URI']
+
+					for ($part=count($requestparts)-1; $part>=0; $part--)
+						if (is_numeric(strpos($requestparts[$part], '&')) || is_numeric(strpos($requestparts[$part], '#'))) { 
+							$keepparts+=count($requestparts)-$part-1; // this is how many parts we lost
+							break;
+						}
+						
+					$requestparts=array_slice($requestparts, -$keepparts); // remove any irrelevant parts from the beginning
 				}
+
+				$relativedepth=count($requestparts);
 				
 			} elseif (isset($_GET['qa'])) {
 				if (strpos($_GET['qa'], '/')===false) {

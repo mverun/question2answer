@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -39,9 +39,11 @@
 
 //	Get information about appropriate categories and redirect to questions page if category has no sub-categories
 	
-	@list($categories, $categoryid)=qa_db_select_with_pending(
+	$userid=qa_get_logged_in_userid();
+	list($categories, $categoryid, $favoritecats)=qa_db_select_with_pending(
 		qa_db_category_nav_selectspec($categoryslugs, false, false, true),
-		$countslugs ? qa_db_slugs_to_category_id_selectspec($categoryslugs) : null
+		$countslugs ? qa_db_slugs_to_category_id_selectspec($categoryslugs) : null,
+		isset($userid) ? qa_db_user_favorite_categories_selectspec($userid) : null
 	);
 	
 	if ($countslugs && !isset($categoryid))
@@ -50,7 +52,7 @@
 
 //	Function for recursive display of categories
 
-	function qa_category_nav_to_browse(&$navigation, $categories, $categoryid)
+	function qa_category_nav_to_browse(&$navigation, $categories, $categoryid, $favoritemap)
 	{
 		foreach ($navigation as $key => $navlink) {
 			$category=$categories[$navlink['categoryid']];
@@ -63,19 +65,22 @@
 			} else
 				$navigation[$key]['state']='closed';
 				
+			if (@$favoritemap[$navlink['categoryid']])
+				$navigation[$key]['favorited']=true;
+				
 			$navigation[$key]['note']='';
 			
 			$navigation[$key]['note'].=
-				' - <A HREF="'.qa_path_html('questions/'.implode('/', array_reverse(explode('/', $category['backpath'])))).'">'.( ($category['qcount']==1)
+				' - <a href="'.qa_path_html('questions/'.implode('/', array_reverse(explode('/', $category['backpath'])))).'">'.( ($category['qcount']==1)
 					? qa_lang_html_sub('main/1_question', '1', '1')
 					: qa_lang_html_sub('main/x_questions', number_format($category['qcount']))
-				).'</A>';
+				).'</a>';
 				
 			if (strlen($category['content']))
 				$navigation[$key]['note'].=qa_html(' - '.$category['content']);
 			
 			if (isset($navlink['subnav']))
-				qa_category_nav_to_browse($navigation[$key]['subnav'], $categories, $categoryid);
+				qa_category_nav_to_browse($navigation[$key]['subnav'], $categories, $categoryid, $favoritemap);
 		}
 	}
 		
@@ -91,7 +96,12 @@
 		
 		unset($navigation['all']);
 		
-		qa_category_nav_to_browse($navigation, $categories, $categoryid);
+		$favoritemap=array();
+		if (isset($favoritecats))
+			foreach ($favoritecats as $category)
+				$favoritemap[$category['categoryid']]=true;
+
+		qa_category_nav_to_browse($navigation, $categories, $categoryid, $favoritemap);
 		
 		$qa_content['nav_list']=array(
 			'nav' => $navigation,

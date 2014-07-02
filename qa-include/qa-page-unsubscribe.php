@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -70,8 +70,8 @@
 	if ($unsubscribed)
 		$qa_content['error']=strtr(qa_lang_html('users/unsubscribe_complete'), array(
 			'^0' => qa_html(qa_opt('site_title')),
-			'^1' => '<A HREF="'.qa_path_html('account').'">',
-			'^2' => '</A>',
+			'^1' => '<a href="'.qa_path_html('account').'">',
+			'^2' => '</a>',
 		));
 	else
 		$qa_content['error']=qa_insert_login_links(qa_lang_html('users/unsubscribe_wrong_log_in'), 'unsubscribe');

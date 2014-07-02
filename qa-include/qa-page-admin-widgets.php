@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -116,44 +116,51 @@
 
 //	Process saving an old or new widget
 
+	$securityexpired=false;
+	
 	if (qa_clicked('docancel'))
 		qa_redirect('admin/layout');
 
 	elseif (qa_clicked('dosavewidget')) {
 		require_once QA_INCLUDE_DIR.'qa-db-admin.php';
 		
-		if (qa_post_text('dodelete')) {
-			qa_db_widget_delete($editwidget['widgetid']);
-			qa_redirect('admin/layout');
+		if (!qa_check_form_security_code('admin/widgets', qa_post_text('code')))
+			$securityexpired=true;
 		
-		} else {
-			if ($widgetfound) {
-				$intitle=qa_post_text('title');
-				$inposition=qa_post_text('position');
-				$intemplates=array();
-				
-				if (qa_post_text('template_all'))
-					$intemplates[]='all';
-				
-				foreach (array_keys($templateoptions) as $template)
-					if (qa_post_text('template_'.$template))
-						$intemplates[]=$template;
-						
-				$intags=implode(',', $intemplates);
-	
-			//	Perform appropriate database action
-		
-				if (isset($editwidget['widgetid'])) { // changing existing widget
-					$widgetid=$editwidget['widgetid'];
-					qa_db_widget_set_fields($widgetid, $intags);
-	
-				} else
-					$widgetid=qa_db_widget_create($intitle, $intags);
-	
-				qa_db_widget_move($widgetid, substr($inposition, 0, 2), substr($inposition, 2));
-			}
+		else {
+			if (qa_post_text('dodelete')) {
+				qa_db_widget_delete($editwidget['widgetid']);
+				qa_redirect('admin/layout');
 			
-			qa_redirect('admin/layout');
+			} else {
+				if ($widgetfound) {
+					$intitle=qa_post_text('title');
+					$inposition=qa_post_text('position');
+					$intemplates=array();
+					
+					if (qa_post_text('template_all'))
+						$intemplates[]='all';
+					
+					foreach (array_keys($templateoptions) as $template)
+						if (qa_post_text('template_'.$template))
+							$intemplates[]=$template;
+							
+					$intags=implode(',', $intemplates);
+		
+				//	Perform appropriate database action
+			
+					if (isset($editwidget['widgetid'])) { // changing existing widget
+						$widgetid=$editwidget['widgetid'];
+						qa_db_widget_set_fields($widgetid, $intags);
+		
+					} else
+						$widgetid=qa_db_widget_create($intitle, $intags);
+		
+					qa_db_widget_move($widgetid, substr($inposition, 0, 2), substr($inposition, 2));
+				}
+				
+				qa_redirect('admin/layout');
+			}
 		}
 	}
 	
@@ -162,9 +169,8 @@
 	
 	$qa_content=qa_content_prepare();
 
-	$qa_content['title']=qa_lang_html('admin/admin_title').' - '.qa_lang_html('admin/layout_title');
-	
-	$qa_content['error']=qa_admin_page_error();
+	$qa_content['title']=qa_lang_html('admin/admin_title').' - '.qa_lang_html('admin/layout_title');	
+	$qa_content['error']=$securityexpired ? qa_lang_html('admin/form_security_expired') : qa_admin_page_error();
 	
 	$positionoptions=array();
 	
@@ -221,7 +227,7 @@
 	$positionvalue=@$positionoptions[$editwidget['place'].$editwidget['position']];
 	
 	$qa_content['form']=array(
-		'tags' => 'METHOD="POST" ACTION="'.qa_path_html(qa_request()).'"',
+		'tags' => 'method="post" action="'.qa_path_html(qa_request()).'"',
 		
 		'style' => 'tall',
 		
@@ -234,7 +240,7 @@
 			
 			'position' => array(
 				'id' => 'position_display',
-				'tags' => 'NAME="position"',
+				'tags' => 'name="position"',
 				'label' => qa_lang_html('admin/position'),
 				'type' => 'select',
 				'options' => $positionoptions,
@@ -242,7 +248,7 @@
 			),
 			
 			'delete' => array(
-				'tags' => 'NAME="dodelete" ID="dodelete"',
+				'tags' => 'name="dodelete" id="dodelete"',
 				'label' => qa_lang_html('admin/delete_widget_position'),
 				'value' => 0,
 				'type' => 'checkbox',
@@ -252,7 +258,7 @@
 				'id' => 'all_display',
 				'label' => qa_lang_html('admin/widget_all_pages'),
 				'type' => 'checkbox',
-				'tags' => 'NAME="template_all" ID="template_all"',
+				'tags' => 'name="template_all" id="template_all"',
 				'value' => is_numeric(strpos(','.@$editwidget['tags'].',', ',all,')),
 			),
 
@@ -270,7 +276,7 @@
 			),
 			
 			'cancel' => array(
-				'tags' => 'NAME="docancel"',
+				'tags' => 'name="docancel"',
 				'label' => qa_lang_html('main/cancel_button'),
 			),
 		),
@@ -279,14 +285,15 @@
 			'dosavewidget' => '1', // for IE
 			'edit' => @$editwidget['widgetid'],
 			'title' => @$editwidget['title'],
+			'code' => qa_get_form_security_code('admin/widgets'),
 		),
 	);
 	
 	foreach ($templateoptions as $template => $optionhtml)
 		$qa_content['form']['fields']['templates']['html'].=
-			'<INPUT TYPE="checkbox" NAME="template_'.qa_html($template).'"'.
-			(is_numeric(strpos(','.@$editwidget['tags'].',', ','.$template.',')) ? ' CHECKED' : '').
-			'/> '.$optionhtml.'<BR/>';
+			'<input type="checkbox" name="template_'.qa_html($template).'"'.
+			(is_numeric(strpos(','.@$editwidget['tags'].',', ','.$template.',')) ? ' checked' : '').
+			'/> '.$optionhtml.'<br/>';
 			
 	if (isset($editwidget['widgetid']))
 		qa_set_display_rules($qa_content, array(

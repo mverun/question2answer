@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -68,6 +68,7 @@
 		
 		$codetolanguage=array( // 2-letter language codes as per ISO 639-1
 			'ar' => 'Arabic - العربية',
+			'az' => 'Azerbaijani - Azərbaycanca',
 			'bg' => 'Bulgarian - Български',
 			'bn' => 'Bengali - বাংলা',
 			'ca' => 'Catalan - Català',
@@ -89,9 +90,12 @@
 			'is' => 'Icelandic - Íslenska',
 			'it' => 'Italian - Italiano',
 			'ja' => 'Japanese - 日本語',
+			'ka' => 'Georgian - ქართული ენა',
 			'kh' => 'Khmer - ភាសាខ្មែរ',
 			'ko' => 'Korean - 한국어',
+			'ku-CKB' => 'Kurdish Central - کورد',
 			'lt' => 'Lithuanian - Lietuvių',
+			'lv' => 'Latvian - Latviešu',
 			'nl' => 'Dutch - Nederlands',
 			'no' => 'Norwegian - Norsk',
 			'pl' => 'Polish - Polski',
@@ -100,11 +104,14 @@
 			'ru' => 'Russian - Русский',
 			'sk' => 'Slovak - Slovenčina',
 			'sl' => 'Slovenian - Slovenščina',
+			'sq' => 'Albanian - Shqip',
 			'sr' => 'Serbian - Српски',
 			'sv' => 'Swedish - Svenska',
 			'th' => 'Thai - ไทย',
 			'tr' => 'Turkish - Türkçe',
+			'ug' => 'Uyghur - ئۇيغۇرچە',
 			'uk' => 'Ukrainian - Українська',
+			'uz' => 'Uzbek - ўзбек',
 			'vi' => 'Vietnamese - Tiếng Việt',
 			'zh-TW' => 'Chinese Traditional - 繁體中文',
 			'zh' => 'Chinese Simplified - 简体中文',
@@ -221,6 +228,8 @@
 			QA_PERMIT_CONFIRMED => qa_lang_html('options/permit_confirmed'),
 			QA_PERMIT_POINTS => qa_lang_html('options/permit_points'),
 			QA_PERMIT_POINTS_CONFIRMED => qa_lang_html('options/permit_points_confirmed'),
+			QA_PERMIT_APPROVED => qa_lang_html('options/permit_approved'),
+			QA_PERMIT_APPROVED_POINTS => qa_lang_html('options/permit_approved_points'),
 			QA_PERMIT_EXPERTS => qa_lang_html('options/permit_experts'),
 			QA_PERMIT_EDITORS => qa_lang_html('options/permit_editors'),
 			QA_PERMIT_MODERATORS => qa_lang_html('options/permit_moderators'),
@@ -240,6 +249,12 @@
 		if (!$dopoints) {
 			unset($options[QA_PERMIT_POINTS]);
 			unset($options[QA_PERMIT_POINTS_CONFIRMED]);
+			unset($options[QA_PERMIT_APPROVED_POINTS]);
+		}
+		
+		if (QA_FINAL_EXTERNAL_USERS || !qa_opt('moderate_users')) {
+			unset($options[QA_PERMIT_APPROVED]);
+			unset($options[QA_PERMIT_APPROVED_POINTS]);
 		}
 			
 		return $options;
@@ -254,8 +269,9 @@
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
 		
 		$navigation=array();
+		$level=qa_get_logged_in_level();
 		
-		if (qa_get_logged_in_level()>=QA_USER_LEVEL_ADMIN) {
+		if ($level>=QA_USER_LEVEL_ADMIN) {
 			$navigation['admin/general']=array(
 				'label' => qa_lang_html('admin/general_title'),
 				'url' => qa_path_html('admin/general'),
@@ -338,25 +354,40 @@
 				'url' => qa_path_html('admin/plugins'),
 			);
 		}
+				
+		if (!qa_user_maximum_permit_error('permit_moderate')) {
+			$count=qa_user_permit_error('permit_moderate') ? null : qa_opt('cache_queuedcount'); // if only in some categories don't show cached count
 			
-		if (!qa_user_permit_error('permit_moderate'))
 			$navigation['admin/moderate']=array(
-				'label' => qa_lang_html('admin/moderate_title'),
+				'label' => qa_lang_html('admin/moderate_title').($count ? (' ('.$count.')') : ''),
 				'url' => qa_path_html('admin/moderate'),
 			);
+		}
 		
-		if (qa_opt('flagging_of_posts') && !qa_user_permit_error('permit_hide_show'))
+		if (qa_opt('flagging_of_posts') && !qa_user_maximum_permit_error('permit_hide_show')) {
+			$count=qa_user_permit_error('permit_hide_show') ? null : qa_opt('cache_flaggedcount'); // if only in some categories don't show cached count
+			
 			$navigation['admin/flagged']=array(
-				'label' => qa_lang_html('admin/flagged_title'),
+				'label' => qa_lang_html('admin/flagged_title').($count ? (' ('.$count.')') : ''),
 				'url' => qa_path_html('admin/flagged'),
 			);
+		}
 		
-		if ( (!qa_user_permit_error('permit_hide_show')) || (!qa_user_permit_error('permit_delete_hidden')) )
+		if ( (!qa_user_maximum_permit_error('permit_hide_show')) || (!qa_user_maximum_permit_error('permit_delete_hidden')) )
 			$navigation['admin/hidden']=array(
 				'label' => qa_lang_html('admin/hidden_title'),
 				'url' => qa_path_html('admin/hidden'),
 			);
 		
+		if ( (!QA_FINAL_EXTERNAL_USERS) && qa_opt('moderate_users') && ($level>=QA_USER_LEVEL_MODERATOR)) {
+			$count=qa_opt('cache_uapprovecount');
+			
+			$navigation['admin/moderate-users']=array(
+				'label' => qa_lang_html('admin/approve_users_title').($count ? (' ('.$count.')') : ''),
+				'url' => qa_path_html('admin/approve'),
+			);
+		}
+
 		return $navigation;
 	}
 	
@@ -366,17 +397,22 @@
 	Return the error that needs to displayed on all admin pages, or null if none
 */
 	{
-		@include_once QA_INCLUDE_DIR.'qa-db-install.php';
+		if (file_exists(QA_INCLUDE_DIR.'qa-db-install.php')) // file can be removed for extra security
+			include_once QA_INCLUDE_DIR.'qa-db-install.php';
 		
 		if (defined('QA_DB_VERSION_CURRENT') && (qa_opt('db_version')<QA_DB_VERSION_CURRENT) && (qa_get_logged_in_level()>=QA_USER_LEVEL_ADMIN))
 			return strtr(
 				qa_lang_html('admin/upgrade_db'),
 				
 				array(
-					'^1' => '<A HREF="'.qa_path_html('install').'">',
-					'^2' => '</A>',
+					'^1' => '<a href="'.qa_path_html('install').'">',
+					'^2' => '</a>',
 				)
 			);
+
+		elseif (defined('QA_BLOBS_DIRECTORY') && !is_writable(QA_BLOBS_DIRECTORY))
+			return qa_lang_html_sub('admin/blobs_directory_error', qa_html(QA_BLOBS_DIRECTORY));
+			
 		else
 			return null;
 	}
@@ -428,64 +464,89 @@
 	}
 	
 	
-	function qa_admin_single_click($postid, $action)
+	function qa_admin_single_click($entityid, $action)
 /*
-	Returns true if admin (hidden/flagged/approve) page $action performed on $postid is permitted by the current user
-	and was processed successfully
+	Returns true if admin (hidden/flagged/approve/moderate) page $action performed on $entityid is permitted by the
+	logged in user and was processed successfully
 */
 	{	
-		require_once QA_INCLUDE_DIR.'qa-app-posts.php';
-		
-		$post=qa_post_get_full($postid);
-		
-		if (isset($post)) {
-			$userid=qa_get_logged_in_userid();
-			$queued=(substr($post['type'], 1)=='_QUEUED');
+		$userid=qa_get_logged_in_userid();
+
+		if ( (!QA_FINAL_EXTERNAL_USERS) && (($action=='userapprove') || ($action=='userblock')) ) { // approve/block moderated users
+			require_once QA_INCLUDE_DIR.'qa-db-selects.php';
+
+			$useraccount=qa_db_select_with_pending(qa_db_user_account_selectspec($entityid, true));
 			
-			switch ($action) {
-				case 'approve':
-					if ($queued && !qa_user_permit_error('permit_moderate')) {
-						qa_post_set_hidden($postid, false, $userid);
+			if ( isset($useraccount) && (qa_get_logged_in_level()>=QA_USER_LEVEL_MODERATOR) )
+				switch ($action) {
+					case 'userapprove':
+						if ($useraccount['level']<=QA_USER_LEVEL_APPROVED) { // don't demote higher level users
+							require_once QA_INCLUDE_DIR.'qa-app-users-edit.php';
+							qa_set_user_level($useraccount['userid'], $useraccount['handle'], QA_USER_LEVEL_APPROVED, $useraccount['level']);
+							return true;
+						}
+						break;
+						
+					case 'userblock':
+						require_once QA_INCLUDE_DIR.'qa-app-users-edit.php';
+						qa_set_user_blocked($useraccount['userid'], $useraccount['handle'], true);
 						return true;
-					}
-					break;
+						break;
+				}
+		
+		} else { // something to do with a post
+			require_once QA_INCLUDE_DIR.'qa-app-posts.php';
+		
+			$post=qa_post_get_full($entityid);
+		
+			if (isset($post)) {
+				$queued=(substr($post['type'], 1)=='_QUEUED');
+			
+				switch ($action) {
+					case 'approve':
+						if ($queued && !qa_user_post_permit_error('permit_moderate', $post)) {
+							qa_post_set_hidden($entityid, false, $userid);
+							return true;
+						}
+						break;
 					
-				case 'reject':
-					if ($queued && !qa_user_permit_error('permit_moderate')) {
-						qa_post_set_hidden($postid, true, $userid);
-						return true;
-					}
-					break;
+					case 'reject':
+						if ($queued && !qa_user_post_permit_error('permit_moderate', $post)) {
+							qa_post_set_hidden($entityid, true, $userid);
+							return true;
+						}
+						break;
 				
-				case 'hide':
-					if ((!$queued) && !qa_user_permit_error('permit_hide_show')) {
-						qa_post_set_hidden($postid, true, $userid);
-						return true;
-					}						
-					break;
+					case 'hide':
+						if ((!$queued) && !qa_user_post_permit_error('permit_hide_show', $post)) {
+							qa_post_set_hidden($entityid, true, $userid);
+							return true;
+						}						
+						break;
 	
-				case 'reshow':
-					if ($post['hidden'] && !qa_user_permit_error('permit_hide_show')) {
-						qa_post_set_hidden($postid, false, $userid);
-						return true;
-					}
-					break;
+					case 'reshow':
+						if ($post['hidden'] && !qa_user_post_permit_error('permit_hide_show', $post)) {
+							qa_post_set_hidden($entityid, false, $userid);
+							return true;
+						}
+						break;
 					
-				case 'delete':
-					if ($post['hidden'] && !qa_user_permit_error('permit_delete_hidden')) {
-						qa_post_delete($postid);
-						return true;
-					}
-					break;
+					case 'delete':
+						if ($post['hidden'] && !qa_user_post_permit_error('permit_delete_hidden', $post)) {
+							qa_post_delete($entityid);
+							return true;
+						}
+						break;
 				
-				case 'clearflags':
-					require_once QA_INCLUDE_DIR.'qa-app-votes.php';
+					case 'clearflags':
+						require_once QA_INCLUDE_DIR.'qa-app-votes.php';
 					
-					if (!qa_user_permit_error('permit_hide_show')) {
-						qa_flags_clear_all($post, $userid, qa_get_logged_in_handle(), null);
-						return true;
-					}
-					break;
+						if (!qa_user_post_permit_error('permit_hide_show', $post)) {
+							qa_flags_clear_all($post, $userid, qa_get_logged_in_handle(), null);
+							return true;
+						}
+						break;
+				}
 			}
 		}
 		
@@ -495,17 +556,23 @@
 	
 	function qa_admin_check_clicks()
 /*
-	Checks for a POSTed click on an admin (hidden/flagged/approve) page, and refresh the page if processed successfully (non Ajax)
+	Checks for a POSTed click on an admin (hidden/flagged/approve/moderate) page, and refresh the page if processed successfully (non Ajax)
 */
 	{
 		if (qa_is_http_post())
 			foreach ($_POST as $field => $value)
 				if (strpos($field, 'admin_')===0) {
-					@list($dummy, $postid, $action)=explode('_', $field);
+					@list($dummy, $entityid, $action)=explode('_', $field);
 					
-					if (strlen($postid) && strlen($action) && qa_admin_single_click($postid, $action))
-						qa_redirect(qa_request());
+					if (strlen($entityid) && strlen($action)) {
+						if (!qa_check_form_security_code('admin/click', qa_post_text('code')))
+							return qa_lang_html('misc/form_security_again');
+						elseif (qa_admin_single_click($entityid, $action))
+							qa_redirect(qa_request());
+					}
 				}
+				
+		return null;
 	}
 	
 	
@@ -521,6 +588,35 @@
 				$metadata[$key]=trim($matches[1]);
 		
 		return $metadata;
+	}
+	
+	
+	function qa_admin_plugin_directory_hash($directory)
+/*
+	Return the hash code for the plugin in $directory, used for in-page navigation on admin/plugins page
+*/
+	{
+		return md5($directory);
+	}
+	
+	
+	function qa_admin_plugin_options_path($directory)
+/*
+	Return the URL (relative to the current page) to navigate to the options panel for the plugin in $directory
+*/
+	{
+		$hash=qa_admin_plugin_directory_hash($directory);		
+		return qa_path_html('admin/plugins', array('show' => $hash), null, null, $hash);
+	}
+	
+
+	function qa_admin_module_options_path($type, $name)
+/*
+	Return the URL (relative to the current page) to navigate to the options panel for plugin module $name of $type
+*/
+	{
+		$info=qa_get_module_info($type, $name);
+		return qa_admin_plugin_options_path($info['directory']);
 	}
 
 

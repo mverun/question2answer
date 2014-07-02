@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -63,13 +63,13 @@
 
 	} else {
 		require_once QA_INCLUDE_DIR.'qa-app-options.php';
-		require_once QA_INCLUDE_DIR.'qa-db-blobs.php';
+		require_once QA_INCLUDE_DIR.'qa-app-blobs.php';
 		require_once QA_INCLUDE_DIR.'qa-util-image.php';
 		
 
 	//	Otherwise retrieve the raw image and scale as appropriate
 		
-		$blob=qa_db_blob_read($blobid);
+		$blob=qa_read_blob($blobid);
 		
 		if (isset($blob)) {
 			if ($size>0)

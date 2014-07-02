@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -41,16 +41,29 @@
 	
 	function qa_db_table_size()
 /*
-	Return the total size in bytes of all tables in the Q2A database
+	Return the total size in bytes of all relevant tables in the Q2A database
 */
 	{
-		$statuses=qa_db_read_all_assoc(qa_db_query_raw(
-			"SHOW TABLE STATUS"
-		));
+		if (defined('QA_MYSQL_USERS_PREFIX')) { // check if one of the prefixes is a prefix itself of the other
+			if (stripos(QA_MYSQL_USERS_PREFIX, QA_MYSQL_TABLE_PREFIX)===0)
+				$prefixes=array(QA_MYSQL_TABLE_PREFIX);
+			elseif (stripos(QA_MYSQL_TABLE_PREFIX, QA_MYSQL_USERS_PREFIX)===0)
+				$prefixes=array(QA_MYSQL_USERS_PREFIX);
+			else
+				$prefixes=array(QA_MYSQL_TABLE_PREFIX, QA_MYSQL_USERS_PREFIX);
 		
+		} else
+			$prefixes=array(QA_MYSQL_TABLE_PREFIX);
+			
 		$size=0;
-		foreach ($statuses as $status)
-			$size+=$status['Data_length']+$status['Index_length'];
+		foreach ($prefixes as $prefix) {
+			$statuses=qa_db_read_all_assoc(qa_db_query_raw(
+				"SHOW TABLE STATUS LIKE '".$prefix."%'"
+			));
+
+			foreach ($statuses as $status)
+				$size+=$status['Data_length']+$status['Index_length'];
+		}
 		
 		return $size;
 	}
@@ -134,11 +147,11 @@
 	
 	function qa_db_get_user_visible_postids($userid)
 /*
-	Return list of postids of visible posts by $userid
+	Return list of postids of visible or queued posts by $userid
 */
 	{
 		return qa_db_read_all_values(qa_db_query_sub(
-			"SELECT postid FROM ^posts WHERE userid=# AND type IN ('Q', 'A', 'C')",
+			"SELECT postid FROM ^posts WHERE userid=# AND type IN ('Q', 'A', 'C', 'Q_QUEUED', 'A_QUEUED', 'C_QUEUED')",
 			$userid
 		));
 	}
@@ -146,11 +159,11 @@
 	
 	function qa_db_get_ip_visible_postids($ip)
 /*
-	Return list of postids of visible posts from $ip address
+	Return list of postids of visible or queued posts from $ip address
 */
 	{
 		return qa_db_read_all_values(qa_db_query_sub(
-			"SELECT postid FROM ^posts WHERE createip=INET_ATON($) AND type IN ('Q', 'A', 'C')",
+			"SELECT postid FROM ^posts WHERE createip=INET_ATON($) AND type IN ('Q', 'A', 'C', 'Q_QUEUED', 'A_QUEUED', 'C_QUEUED')",
 			$ip
 		));
 	}
@@ -168,6 +181,55 @@
 			), 'postid', 'count');
 		else
 			return array();
+	}
+	
+	
+	function qa_db_get_unapproved_users($count)
+/*
+	Return an array of the (up to) $count most recently created users who are awaiting approval and have not been blocked.
+	The array element for each user includes a 'profile' key whose value is an array of non-empty profile fields of the user.
+*/
+	{
+		$results=qa_db_read_all_assoc(qa_db_query_sub(
+			"SELECT ^users.userid, UNIX_TIMESTAMP(created) AS created, INET_NTOA(createip) AS createip, email, handle, flags, title, content FROM ^users LEFT JOIN ^userprofile ON ^users.userid=^userprofile.userid AND LENGTH(content)>0 WHERE level<# AND NOT (flags&#) ORDER BY created DESC LIMIT #",
+			QA_USER_LEVEL_APPROVED, QA_USER_FLAGS_USER_BLOCKED, $count
+		));
+		
+		$users=array();
+		
+		foreach ($results as $result) {
+			$userid=$result['userid'];
+			
+			if (!isset($users[$userid])) {
+				$users[$result['userid']]=$result;
+				$users[$result['userid']]['profile']=array();
+				unset($users[$userid]['title']);
+				unset($users[$userid]['content']);
+			}
+			
+			if (isset($result['title']) && isset($result['content']))
+				$users[$userid]['profile'][$result['title']]=$result['content'];
+		}
+		
+		return $users;
+	}
+	
+	
+	function qa_db_has_blobs_on_disk()
+/*
+	Return whether there are any blobs whose content has been stored as a file on disk
+*/
+	{
+		return count(qa_db_read_all_values(qa_db_query_sub('SELECT blobid FROM ^blobs WHERE content IS NULL LIMIT 1'))) ? true : false;
+	}
+	
+	
+	function qa_db_has_blobs_in_db()
+/*
+	Return whether there are any blobs whose content has been stored in the database
+*/
+	{
+		return count(qa_db_read_all_values(qa_db_query_sub('SELECT blobid FROM ^blobs WHERE content IS NOT NULL LIMIT 1'))) ? true : false;
 	}
 
 	
@@ -442,30 +504,30 @@
 	}
 	
 	
-	function qa_db_userfield_create($title, $content, $flags)
+	function qa_db_userfield_create($title, $content, $flags, $permit=null)
 /*
-	Create a new user field with (internal) tag $title, label $content, and $flags in the database
+	Create a new user field with (internal) tag $title, label $content, $flags and $permit in the database.
 */
 	{
 		$position=qa_db_read_one_value(qa_db_query_sub('SELECT 1+COALESCE(MAX(position), 0) FROM ^userfields'));
 		
 		qa_db_query_sub(
-			'INSERT INTO ^userfields (title, content, position, flags) VALUES ($, $, #, #)',
-			$title, $content, $position, $flags
+			'INSERT INTO ^userfields (title, content, position, flags, permit) VALUES ($, $, #, #, #)',
+			$title, $content, $position, $flags, $permit
 		);
 
 		return qa_db_last_insert_id();
 	}
 	
 	
-	function qa_db_userfield_set_fields($fieldid, $content, $flags)
+	function qa_db_userfield_set_fields($fieldid, $content, $flags, $permit=null)
 /*
-	Change the user field $fieldid to have label $content and $flags in the database (the title column cannot be changed once set)
+	Change the user field $fieldid to have label $content, $flags and $permit in the database (the title column cannot be changed once set)
 */
 	{
 		qa_db_query_sub(
-			'UPDATE ^userfields SET content=$, flags=# WHERE fieldid=#',
-			$content, $flags, $fieldid
+			'UPDATE ^userfields SET content=$, flags=#, permit=# WHERE fieldid=#',
+			$content, $flags, $permit, $fieldid
 		);
 	}
 	

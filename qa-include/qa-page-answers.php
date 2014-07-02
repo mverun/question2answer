@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -41,7 +41,7 @@
 
 //	Get list of answers with related questions, plus category information
 	
-	@list($questions, $categories, $categoryid)=qa_db_select_with_pending(
+	list($questions, $categories, $categoryid)=qa_db_select_with_pending(
 		qa_db_recent_a_qs_selectspec($userid, 0, $categoryslugs),
 		qa_db_category_nav_selectspec($categoryslugs, false, false, true),
 		$countslugs ? qa_db_slugs_to_category_id_selectspec($categoryslugs) : null

@@ -1,7 +1,7 @@
 <?php
 	
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -30,9 +30,9 @@
 	}
 
 
-	function qa_db_blob_create($content, $format, $filename=null, $userid=null, $cookieid=null, $ip=null)
+	function qa_db_blob_create($content, $format, $sourcefilename=null, $userid=null, $cookieid=null, $ip=null)
 /*
-	Create a new blob in the database with $content and $format, returning its blobid
+	Create a new blob in the database with $content and $format, other fields as provided 
 */
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
@@ -45,7 +45,7 @@
 
 			qa_db_query_sub(
 				'INSERT INTO ^blobs (blobid, format, content, filename, userid, cookieid, createip, created) VALUES (#, $, $, $, $, #, INET_ATON($), NOW())',
-				$blobid, $format, $content, $filename, $userid, $cookieid, $ip
+				$blobid, $format, $content, $sourcefilename, $userid, $cookieid, $ip
 			);
 		
 			return $blobid;
@@ -57,7 +57,7 @@
 	
 	function qa_db_blob_read($blobid)
 /*
-	Get the content of blob $blobid from the database
+	Get the information about blob $blobid from the database
 */
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
@@ -66,6 +66,18 @@
 			'SELECT content, format, filename FROM ^blobs WHERE blobid=#',
 			$blobid
 		), true);
+	}
+	
+	
+	function qa_db_blob_set_content($blobid, $content)
+/*
+	Change the content of blob $blobid in the database to $content (can also be null)
+*/
+	{
+		qa_db_query_sub(
+			'UPDATE ^blobs SET content=$ WHERE blobid=#',
+			$content, $blobid
+		);
 	}
 	
 	

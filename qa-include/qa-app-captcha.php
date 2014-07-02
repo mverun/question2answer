@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Question2Answer (c) Gideon Greenspan
+	Question2Answer by Gideon Greenspan and contributors
 
 	http://www.question2answer.org/
 
@@ -41,6 +41,31 @@
 	}
 	
 	
+	function qa_captcha_reason_note($captchareason)
+/*
+	Return an HTML string explaining $captchareason (from qa_user_captcha_reason()) to the user about why they are seeing a captcha
+*/
+	{
+		$notehtml=null;
+		
+		switch ($captchareason) {
+			case 'login':
+				$notehtml=qa_insert_login_links(qa_lang_html('misc/captcha_login_fix'));
+				break;
+				
+			case 'confirm':
+				$notehtml=qa_insert_login_links(qa_lang_html('misc/captcha_confirm_fix'));
+				break;
+				
+			case 'approve':
+				$notehtml=qa_lang_html('misc/captcha_approve_fix');
+				break;		
+		}
+		
+		return $notehtml;
+	}
+
+
 	function qa_set_up_captcha_field(&$qa_content, &$fields, $errors, $note=null)
 /*
 	Prepare $qa_content for showing a captcha, adding the element to $fields, given previous $errors, and a $note to display
@@ -61,7 +86,7 @@
 			$fields['captcha']=array(
 				'type' => 'custom',
 				'label' => qa_lang_html('misc/captcha_label'),
-				'html' => '<DIV ID="qa_captcha_div_'.$count.'">'.$html.'</DIV>',
+				'html' => '<div id="qa_captcha_div_'.$count.'">'.$html.'</div>',
 				'error' => @array_key_exists('captcha', $errors) ? qa_lang_html('misc/captcha_error') : null,
 				'note' => $note,
 			);
