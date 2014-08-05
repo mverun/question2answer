@@ -1,0 +1,13 @@
+applications:
+- name: question2answer
+  framework:
+    name: php
+  instances: 1
+  mem: 256M
+  services:
+    ${name}-db:
+      type: mysql
+  stackato:
+    min_version:
+      client: 1.4.3
+      server: 1.0
