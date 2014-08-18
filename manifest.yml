@@ -1,7 +1,6 @@
 applications:
 - name: question2answer
-  framework:
-    name: php
+  buildpack: https://github.com/ActiveState/heroku-buildpack-php.git
   instances: 1
   mem: 256M
   services:
