@@ -16,11 +16,9 @@ Thanks and enjoy!
 
 Gideon
 
-Deploying to Stackato
+Deploying to HPE Helion Stackato
 ---------------------
 
-    $ git clone git://github.com/Stackato-Apps/question2answer.git
-    $ cd question2answer
     $ stackato push -n
 
 
