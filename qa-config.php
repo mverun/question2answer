@@ -30,17 +30,20 @@
 	======================================================================
 */
 
-  $url_parts = parse_url($_SERVER['DATABASE_URL']);
-  $db_name = substr( $url_parts{'path'}, 1 );
-//  $db_connection_string = $url_parts{'host'} . ':' . $url_parts{'port'};
+	$services_json = json_decode(getenv('VCAP_SERVICES'), true);
+	$service_name = '';
+	foreach($services_json as $service_name=>$value) {
+		$service_name = $service_name;
+		break;
+	}
+	$credentials = $services_json[$service_name][0]['credentials'];
 
-  // ** MySQL settings from resource descriptor ** //
-//  echo $url_parts{'port'};
-	define('QA_MYSQL_HOSTNAME', $url_parts{'host'});
-	define('QA_MYSQL_USERNAME', $url_parts{'user'});
-	define('QA_MYSQL_PASSWORD', $url_parts{'pass'});
-	define('QA_MYSQL_DATABASE', $db_name);
-	
+	// ** MySQL settings from resource descriptor ** //
+        define('QA_MYSQL_HOSTNAME', $credentials['host']);
+	define('QA_MYSQL_USERNAME', $credentials['user']);
+	define('QA_MYSQL_PASSWORD', $credentials['password']);
+	define('QA_MYSQL_DATABASE', $credentials['name']);
+
 /*
 	Ultra-concise installation instructions:
 	
