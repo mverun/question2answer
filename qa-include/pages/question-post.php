@@ -144,7 +144,7 @@
 
 	if ($question['commentbutton']) {
 		if (qa_clicked('q_docomment'))
-			qa_page_q_refresh($pagestart, 'comment-'.$questionid);
+			qa_page_q_refresh($pagestart, 'comment-'.$questionid, 'C', $questionid);
 
 		if (qa_clicked('c'.$questionid.'_doadd') || ($pagestate==('comment-'.$questionid)))
 			qa_page_q_do_comment($question, $question, $commentsfollows, $pagestart, $usecaptcha, $cnewin, $cnewerrors, $formtype, $formpostid, $pageerror);
@@ -182,7 +182,7 @@
 
 		if ($answer['commentbutton']) {
 			if (qa_clicked($prefix.'docomment'))
-				qa_page_q_refresh($pagestart, 'comment-'.$answerid, 'A', $answerid);
+				qa_page_q_refresh($pagestart, 'comment-'.$answerid, 'C', $answerid);
 
 			if (qa_clicked('c'.$answerid.'_doadd') || ($pagestate==('comment-'.$answerid)))
 				qa_page_q_do_comment($question, $answer, $commentsfollows, $pagestart, $usecaptcha, $cnewin, $cnewerrors, $formtype, $formpostid, $pageerror);
@@ -418,7 +418,7 @@
 		$in=array();
 
 		if ($question['editable']) {
-			$in['title']=qa_post_text('q_title');
+			$in['title']=qa_get_post_title('q_title');
 			qa_get_post_content('q_editor', 'q_content', $in['editor'], $in['content'], $in['format'], $in['text']);
 			$in['extra']=qa_opt('extra_field_active') ? qa_post_text('q_extra') : null;
 		}
@@ -872,7 +872,7 @@
 					$commentid=qa_page_q_add_c_submit($question, $parent, $commentsfollows, $usecaptcha, $cnewin[$parentid], $cnewerrors[$parentid]);
 
 					if (isset($commentid))
-						qa_page_q_refresh($pagestart, null, $parent['basetype'], $parentid);
+						qa_page_q_refresh($pagestart, null, 'C', $commentid);
 
 					else {
 						$formtype='c_add';

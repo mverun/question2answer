@@ -250,6 +250,9 @@
 		'flagging_notify_first' => 1,
 		'max_num_q_tags' => 2,
 		'max_rate_ip_logins' => 1,
+		'min_len_a_content' => 1,
+		'min_len_c_content' => 1,
+		'min_len_q_title' => 1,
 		'page_size_activity' => 1,
 		'page_size_ask_check_qs' => 3,
 		'page_size_ask_tags' => 3,
@@ -1223,7 +1226,6 @@
 					$editors = qa_list_modules('editor');
 
 					$selectoptions = array();
-					$optionslinks = false;
 
 					foreach ($editors as $editor) {
 						$selectoptions[qa_html($editor)] = strlen($editor) ? qa_html($editor) : qa_lang_html('admin/basic_editor');
