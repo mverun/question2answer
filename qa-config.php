@@ -33,8 +33,10 @@
 	$services_json = json_decode(getenv('VCAP_SERVICES'), true);
 	$service_name = '';
 	foreach($services_json as $service_name=>$value) {
-		$service_name = $service_name;
-		break;
+		if (strpos($service_name, 'mysql') !== false) {
+			$service_name = $service_name;
+			break;
+		}
 	}
 	$credentials = $services_json[$service_name][0]['credentials'];
 
