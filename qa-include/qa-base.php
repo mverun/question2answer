@@ -21,8 +21,8 @@
 */
 
 
-	define('QA_VERSION', '1.7.1'); // also used as suffix for .js and .css requests
-	define('QA_BUILD_DATE', '2015-07-27');
+	define('QA_VERSION', '1.7.4'); // also used as suffix for .js and .css requests
+	define('QA_BUILD_DATE', '2016-03-14');
 
 
 	/**
@@ -262,6 +262,10 @@
 			define('QA_FINAL_EXTERNAL_USERS', QA_EXTERNAL_USERS);
 		}
 
+		if (defined('QA_MYSQL_PORT')) {
+			define('QA_FINAL_MYSQL_PORT', QA_MYSQL_PORT);
+		}
+
 	//	Possible URL schemes for Q2A and the string used for url scheme testing
 
 		define('QA_URL_FORMAT_INDEX', 0);  // http://...../index.php/123/why-is-the-sky-blue
@@ -270,7 +274,7 @@
 		define('QA_URL_FORMAT_PARAMS', 4); // http://...../?qa=123&qa_1=why-is-the-sky-blue
 		define('QA_URL_FORMAT_SAFEST', 5); // http://...../index.php?qa=123&qa_1=why-is-the-sky-blue
 
-		define('QA_URL_TEST_STRING', '$&-_~#%\\@^*()=!()][`\';:|".{},<>?# π§½Жש'); // tests escaping, spaces, quote slashing and unicode - but not + and /
+		define('QA_URL_TEST_STRING', '$&-_~#%\\@^*()][`\';=:|".{},!<>?# π§½Жש'); // tests escaping, spaces, quote slashing and unicode - but not + and /
 	}
 
 
@@ -1540,6 +1544,11 @@
 */
 	{
 		if (qa_to_override(__FUNCTION__)) { $args=func_get_args(); return qa_call_override(__FUNCTION__, $args); }
+
+		// ensure we're fetching a remote URL
+		if (!preg_match('#^https?://#', $url)) {
+			return '';
+		}
 
 		$contents=@file_get_contents($url);
 

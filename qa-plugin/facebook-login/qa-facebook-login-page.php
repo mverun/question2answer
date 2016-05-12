@@ -22,14 +22,11 @@
 
 class qa_facebook_login_page
 {
-
 	private $directory;
-	private $urltoroot;
 
 	public function load_module($directory, $urltoroot)
 	{
 		$this->directory=$directory;
-		$this->urltoroot=$urltoroot;
 	}
 
 	public function match_request($request)
@@ -59,7 +56,7 @@ class qa_facebook_login_page
 
 				if ($fb_userid) {
 					try {
-						$user=$facebook->api('/me?fields=email,name,verified,location,website,about,picture');
+						$user=$facebook->api('/me?fields=email,name,verified,location,website,about,picture.width(250)');
 
 						if (is_array($user))
 							qa_log_in_external_user('facebook', $fb_userid, array(

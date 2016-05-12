@@ -639,7 +639,7 @@
 	{
 		$selectspec=qa_db_posts_basic_selectspec();
 
-		$selectspec['source'].=" WHERE ^posts.postid=(SELECT IF(LEFT(parent.type, 1)='A', parent.parentid, parent.postid) FROM ^posts AS child LEFT JOIN ^posts AS parent ON parent.postid=child.parentid WHERE child.postid=#)";
+		$selectspec['source'].=" WHERE ^posts.postid=(SELECT IF(LEFT(parent.type, 1)='A', parent.parentid, parent.postid) FROM ^posts AS child LEFT JOIN ^posts AS parent ON parent.postid=child.parentid WHERE child.postid=# AND parent.type IN('Q','A'))";
 		$selectspec['arguments']=array($postid);
 		$selectspec['single']=true;
 
@@ -1026,8 +1026,8 @@
 	{
 		return array(
 			'columns' => array('wordid', 'word', 'tagcount'),
-			'source' => '^words WHERE word=$',
-			'arguments' => array($tag),
+			'source' => '^words WHERE word=$ AND word=$ COLLATE utf8_bin',
+			'arguments' => array($tag, qa_strtolower($tag)),
 			'single' => true,
 		);
 	}
