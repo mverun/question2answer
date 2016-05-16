@@ -3,9 +3,4 @@ applications:
   instances: 1
   memory: 256M
   services:
-    ${name}-db:
-      type: mysql
-  stackato:
-    min_version:
-      client: 1.4.3
-      server: 1.0
+  - question2answer-db
