@@ -33,7 +33,7 @@
 	$services_json = json_decode(getenv('VCAP_SERVICES'), true);
 	$service_name = '';
 	foreach($services_json as $service_name=>$value) {
-		if (strpos($service_name, 'mysql') !== false) {
+		if (strpos($service_name, 'mysql') !== false || strpos($service_name, 'mssql') !== false) {
 			$service_name = $service_name;
 			break;
 		}
