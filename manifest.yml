@@ -4,3 +4,4 @@ applications:
   memory: 256M
   services:
   - question2answer-db
+  stack: cflinuxfs2
