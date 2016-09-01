@@ -1,6 +1,7 @@
 {
     "name": "question2answer",
     "require": {
-        "ext-mysqli": "*"
+        "ext-mysqli": "*",
+        "ext-mysql": "*"
     }
 }

@@ -54,11 +54,6 @@ Thanks and enjoy!
 
 Gideon
 
-Deploying to HPE Helion Stackato
----------------------
-
-    $ stackato push -n
-
 
 [Q2A]: http://www.question2answer.org/
 [1]: http://www.question2answer.org/qa/user/Scott
