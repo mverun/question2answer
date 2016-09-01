@@ -1,5 +1,5 @@
 applications:
-- name: question2answer
+- name: q2a
   instances: 1
   memory: 256M
   services:
